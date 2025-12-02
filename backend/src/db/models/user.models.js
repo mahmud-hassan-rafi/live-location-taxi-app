@@ -21,3 +21,15 @@ userSchema.methods.generateAuthToken = function () {
   });
   return token;
 };
+
+userSchema.methods.comparePassword = async function (enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
+};
+
+userSchema.statics.hashPassword = async function (password) {
+  const salt = await bcrypt.genSalt(10);
+  return await bcrypt.hash(password, salt);
+};
+
+const userModel = mongoose.model("User", userSchema);
+export default userModel;
