@@ -283,6 +283,281 @@ curl -X GET http://localhost:5000/api/users/logout \
   -H "Authorization: Bearer <your-token-here>"
 ```
 
+---
+
+## Captain Authentication 🚖
+
+Captains (drivers) have a separate authentication flow with similar JWT-based security but additional vehicle information.
+
+**Captain API Endpoints** 🌐
+
+#### 1. Register Captain
+
+**POST** `/api/captains/register`
+
+**Request:**
+
+```json
+{
+  "fullname": {
+    "firstname": "mahmud",
+    "lastname": "hassan"
+  },
+  "email": "mahmud@gmail.com",
+  "password": "securePassword123",
+  "vehicle": {
+    "color": "red",
+    "plate": "S8NXC91",
+    "capacity": 5,
+    "vehicleType": "car"
+  }
+}
+```
+
+**Request Notes:**
+
+- `vehicleType` must be one of: `motorcycle`, `car`, `auto`
+- `capacity` must be at least 1
+- `plate` must be unique (no two captains can have the same vehicle plate)
+- All vehicle fields are required
+
+**Success Response (201):**
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "captain": {
+    "_id": "65a1b2c3d4e5f6g7h8i9j0k2",
+    "fullname": {
+      "firstname": "mahmud",
+      "lastname": "hassan"
+    },
+    "email": "mahmud@gmail.com",
+    "captainStatus": "unavailable",
+    "vehicle": {
+      "color": "red",
+      "plate": "S8NXC91",
+      "capacity": 5,
+      "vehicleType": "car"
+    },
+    "__v": 0
+  }
+}
+```
+
+**Error Response (400) - Validation Error:**
+
+```json
+{
+  "errors": [
+    {
+      "type": "field",
+      "value": "ab",
+      "msg": "Firstname must be at least 3 characters",
+      "path": "fullname.firstname",
+      "location": "body"
+    },
+    {
+      "type": "field",
+      "value": "red",
+      "msg": "Plate must be at least 3 characters",
+      "path": "vehicle.plate",
+      "location": "body"
+    }
+  ]
+}
+```
+
+**Error Response (400) - Captain Already Exists:**
+
+```json
+{
+  "success": false,
+  "message": "email already exists"
+}
+```
+
+**Error Response (400) - Duplicate Plate:**
+
+```json
+{
+  "success": false,
+  "message": "plate already exists"
+}
+```
+
+---
+
+#### 2. Login Captain
+
+**POST** `/api/captains/login`
+
+**Request:**
+
+```json
+{
+  "email": "mahmud@gmail.com",
+  "password": "securePassword123"
+}
+```
+
+**Success Response (200):**
+
+```json
+{
+  "isPasswordMatched": true,
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "captain": {
+    "_id": "65a1b2c3d4e5f6g7h8i9j0k2",
+    "fullname": {
+      "firstname": "mahmud",
+      "lastname": "hassan"
+    },
+    "email": "mahmud@gmail.com",
+    "captainStatus": "unavailable",
+    "vehicle": {
+      "color": "red",
+      "plate": "S8NXC91",
+      "capacity": 5,
+      "vehicleType": "car"
+    }
+  }
+}
+```
+
+**Also sets httpOnly cookie:**
+
+```
+Set-Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...; HttpOnly; Max-Age=604800; Path=/
+```
+
+**Error Response (401):**
+
+```json
+{
+  "message": "Invalid email or password"
+}
+```
+
+---
+
+#### 3. Get Captain Profile
+
+**GET** `/api/captains/profile`
+
+**Headers (choose one):**
+
+Option A - Cookie:
+
+```http
+Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Option B - Authorization Header:
+
+```http
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Success Response (200):**
+
+```json
+{
+  "message": "welcome to the captain profile"
+}
+```
+
+**Error Response (401):**
+
+```json
+{
+  "message": "Unauthorized"
+}
+```
+
+_(returned if token is missing, invalid, or blacklisted)_
+
+---
+
+#### 4. Logout Captain
+
+**GET** `/api/captains/logout`
+
+**Headers:**
+
+```http
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+OR cookie (set during login)
+
+**Success Response (200):**
+
+```json
+{
+  "message": "Logout done"
+}
+```
+
+**Also clears httpOnly cookie:**
+
+```
+Set-Cookie: token=; HttpOnly; Max-Age=0; Path=/
+```
+
+_Token is added to the blacklist collection and will be rejected for 7 days (TTL expiry)._
+
+---
+
+**Quick Test Commands (cURL):**
+
+Register Captain:
+
+```bash
+curl -X POST http://localhost:5000/api/captains/register \
+  -H "Content-Type: application/json" \
+  -d '{"fullname":{"firstname":"mahmud","lastname":"hassan"},"email":"mahmud@gmail.com","password":"securePassword123","vehicle":{"color":"red","plate":"S8NXC91","capacity":5,"vehicleType":"car"}}'
+```
+
+Login Captain:
+
+```bash
+curl -X POST http://localhost:5000/api/captains/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"mahmud@gmail.com","password":"securePassword123"}'
+```
+
+Get Captain Profile (with Authorization header):
+
+```bash
+curl -X GET http://localhost:5000/api/captains/profile \
+  -H "Authorization: Bearer <your-token-here>"
+```
+
+Get Captain Profile (with cookie):
+
+```bash
+curl -X GET http://localhost:5000/api/captains/profile \
+  -H "Cookie: token=<your-token-here>"
+```
+
+Logout Captain:
+
+```bash
+curl -X GET http://localhost:5000/api/captains/logout \
+  -H "Authorization: Bearer <your-token-here>"
+```
+
+---
+
+**Captain Features:**
+
+- Status tracking: `available` or `unavailable` (default: `unavailable`)
+- Vehicle information: color, plate, capacity, type (motorcycle/car/auto)
+- JWT token includes role identifier: `{ _id, email, role: "captain" }`
+- Unique plate enforcement to prevent duplicate vehicle registrations
+- Same blacklist system as users for logout invalidation
+
 **Security Best Practices** 🔒
 
 - Use HTTPS in production and set the cookie `secure: true`.
